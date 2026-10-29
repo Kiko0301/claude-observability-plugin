@@ -68,3 +68,27 @@ def test_absorbed_mid_turn_notification_clears_the_gate(hook_module):
         },
     ]
     assert hook_module.get_undelivered_queued_notification_ids(rows) == []
+
+
+def test_content_bearing_remove_alone_clears_the_gate(hook_module):
+    # Older Claude Code versions omit the attachment row but still write the
+    # remove row with the notification content.
+    rows = [
+        {"type": "queue-operation", "operation": "enqueue", "content": NOTIFICATION},
+        {
+            "type": "queue-operation",
+            "operation": "remove",
+            "reason": "absorbed_mid_turn",
+            "content": NOTIFICATION,
+        },
+    ]
+    assert hook_module.get_undelivered_queued_notification_ids(rows) == []
+
+
+def test_removal_without_content_keeps_the_gate_closed(hook_module):
+    # A remove row that cannot be matched must stay conservative.
+    rows = [
+        {"type": "queue-operation", "operation": "enqueue", "content": NOTIFICATION},
+        {"type": "queue-operation", "operation": "remove", "content": None},
+    ]
+    assert hook_module.get_undelivered_queued_notification_ids(rows) == ["toolu_X"]

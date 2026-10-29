@@ -1239,10 +1239,11 @@ def get_undelivered_queued_notification_ids(rows: List[Dict[str, Any]]) -> List[
 
     A queued result already fills the launch entry's final_content, so the
     pending-agents check goes clean — yet the turn provably continues: the
-    delivery row and Claude's follow-up response are still outstanding.
-    Queue remove rows carry no notification content and cannot be matched, so
-    a removed notification keeps the gate closed until the turn ends — the
-    safe direction (close-time emission is always correct).
+    delivery row and Claude's follow-up response are still outstanding. A
+    notification that leaves the queue (a remove row that repeats its content)
+    can no longer continue the turn, so it counts as delivered. Remove rows
+    without content cannot be matched and keep the gate closed until the turn
+    ends — the safe direction (close-time emission is always correct).
     """
     queued: List[str] = []
     delivered = set()
@@ -1252,7 +1253,7 @@ def get_undelivered_queued_notification_ids(rows: List[Dict[str, Any]]) -> List[
         tool_use_id = get_tool_use_id_from_task_notification(row)
         if not tool_use_id:
             continue
-        if row.get("type") == "queue-operation":
+        if row.get("type") == "queue-operation" and row.get("operation") != "remove":
             queued.append(tool_use_id)
         else:
             delivered.add(tool_use_id)
